@@ -71,11 +71,81 @@
     margin-top: 5rem;
   }
 
+  /* ===== セレクター ===== */
+  .selector-wrap {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .selector-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+  }
+
+  .selector-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .selector {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  .selector:focus { border-color: var(--accent); }
+  .selector option { background: var(--surface); }
+
+  .start-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 0.6rem 1.5rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    align-self: flex-end;
+    white-space: nowrap;
+  }
+
+  .start-btn:hover { background: var(--accent); color: var(--bg); }
+  .start-btn:disabled { border-color: var(--border); color: var(--text-dim); cursor: not-allowed; }
+
+  /* ===== ローディング ===== */
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    display: none;
+  }
+
+  .loading.show { display: block; }
+
+  /* ===== プログレス ===== */
   .progress-bar {
     width: 100%;
     height: 2px;
     background: var(--border);
-    margin-bottom: 3rem;
+    margin-bottom: 1rem;
   }
 
   .progress-fill {
@@ -90,9 +160,10 @@
     font-size: 0.7rem;
     color: var(--text-dim);
     text-align: right;
-    margin-top: 0.4rem;
+    margin-bottom: 1.5rem;
   }
 
+  /* ===== カード ===== */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -119,19 +190,22 @@
     margin-bottom: 1rem;
   }
 
-  .japanese {
-    font-size: 1.1rem;
+  /* 説明・和訳（D列） */
+  .description {
+    font-size: 0.95rem;
     font-weight: 300;
     color: var(--text);
-    line-height: 1.8;
+    line-height: 1.9;
     margin-bottom: 1.5rem;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
+    white-space: pre-wrap;
   }
 
-  .english-display {
+  /* タイピング文（C列）ルビ付き */
+  .typing-target {
     font-family: 'Space Mono', monospace;
     font-size: 1.05rem;
-    line-height: 1.8;
+    line-height: 2.2;
     letter-spacing: 0.05em;
     min-height: 2rem;
     margin-bottom: 1rem;
@@ -147,6 +221,14 @@
   @keyframes blink {
     0%, 100% { border-color: var(--accent); }
     50% { border-color: transparent; }
+  }
+
+  /* ルビ */
+  ruby { ruby-align: center; }
+  rt {
+    font-size: 0.5em;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
   }
 
   .input-area { position: relative; }
@@ -233,18 +315,9 @@
     font-family: 'Space Mono', monospace;
   }
 
-  .legend-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-  .kb-row {
-    display: flex;
-    gap: 3px;
-    margin-bottom: 3px;
-    justify-content: center;
-  }
+  .kb-row { display: flex; gap: 3px; margin-bottom: 3px; justify-content: center; }
 
   .kb-key {
     display: flex;
@@ -263,12 +336,12 @@
     user-select: none;
   }
 
-  .wide-tab   { min-width: 54px; }
-  .wide-caps  { min-width: 62px; }
+  .wide-tab { min-width: 54px; }
+  .wide-caps { min-width: 62px; }
   .wide-shift-l { min-width: 76px; }
   .wide-shift-r { min-width: 94px; }
   .wide-enter { min-width: 76px; }
-  .wide-back  { min-width: 68px; }
+  .wide-back { min-width: 68px; }
   .wide-space { min-width: 210px; }
 
   .f-pl { border-color: #ff6b9d44; }
@@ -326,12 +399,7 @@
     display: block;
   }
 
-  .result-stat-label {
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    margin-top: 0.4rem;
-    display: block;
-  }
+  .result-stat-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.4rem; display: block; }
 
   .btn {
     font-family: 'Space Mono', monospace;
@@ -345,9 +413,12 @@
     cursor: pointer;
     border-radius: 2px;
     transition: all 0.2s;
+    margin: 0.5rem;
   }
 
   .btn:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 20px var(--accent-dim); }
+
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -362,40 +433,64 @@
 </header>
 
 <div class="main">
-  <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width:0%"></div>
-  </div>
-  <div class="progress-label" id="progressLabel">1 / 21</div>
 
-  <div class="card" id="gameCard">
-    <div class="sentence-number" id="sentenceNumber">SENTENCE 01</div>
-    <div class="japanese" id="japaneseText"></div>
-    <div class="english-display" id="englishDisplay"></div>
-    <div class="input-area">
-      <input type="text" class="input-field" id="inputField"
-        autocomplete="off" autocorrect="off" autocapitalize="off"
-        spellcheck="false" placeholder="ここにタイピング...">
-      <button class="audio-btn" id="audioBtn" title="音声を再生">🔊</button>
+  <!-- セレクター -->
+  <div class="selector-wrap" id="selectorWrap">
+    <div class="selector-group">
+      <div class="selector-label">分野</div>
+      <select class="selector" id="sheetSelect">
+        <option value="">読み込み中...</option>
+      </select>
     </div>
-    <div class="hint">
-      <span><kbd>Esc</kbd> 音声再生</span>
+    <div class="selector-group">
+      <div class="selector-label">単元</div>
+      <select class="selector" id="unitSelect">
+        <option value="">分野を選択してください</option>
+      </select>
     </div>
+    <button class="start-btn" id="startBtn" disabled>START</button>
   </div>
 
-  <div class="keyboard-wrap" id="keyboardWrap">
-    <div class="keyboard-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#ff6b9d"></div>小指（左）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff9f43"></div>薬指（左）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffd843"></div>中指（左）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#43ff83"></div>人差し指（左）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#43d4ff"></div>人差し指（右）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#7c6bff"></div>中指（右）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff6bff"></div>薬指（右）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b"></div>小指（右）</div>
+  <div class="loading" id="loading">データを読み込み中...</div>
+
+  <!-- ゲーム -->
+  <div id="gameArea" class="hidden">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
     </div>
-    <div id="keyboard"></div>
+    <div class="progress-label" id="progressLabel">1 / 0</div>
+
+    <div class="card" id="gameCard">
+      <div class="sentence-number" id="sentenceNumber">SENTENCE 01</div>
+      <div class="description" id="descriptionText"></div>
+      <div class="typing-target" id="typingDisplay"></div>
+      <div class="input-area">
+        <input type="text" class="input-field" id="inputField"
+          autocomplete="off" autocorrect="off" autocapitalize="off"
+          spellcheck="false" placeholder="ここにタイピング...">
+        <button class="audio-btn" id="audioBtn" title="音声を再生">🔊</button>
+      </div>
+      <div class="hint">
+        <span><kbd>Esc</kbd> 音声再生</span>
+      </div>
+    </div>
+
+    <div class="keyboard-wrap" id="keyboardWrap">
+      <div class="keyboard-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#ff6b9d"></div>小指（左）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff9f43"></div>薬指（左）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ffd843"></div>中指（左）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#43ff83"></div>人差し指（左）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#43d4ff"></div>人差し指（右）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7c6bff"></div>中指（右）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff6bff"></div>薬指（右）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b"></div>小指（右）</div>
+      </div>
+      <div id="keyboard"></div>
+    </div>
   </div>
 
+  <!-- リザルト -->
   <div class="card result-card" id="resultCard">
     <div class="result-title">Complete</div>
     <div class="result-stats">
@@ -412,36 +507,19 @@
         <span class="result-stat-label">総ミス数</span>
       </div>
     </div>
-    <button class="btn" id="restartBtn">もう一度</button>
+    <button class="btn" id="retryBtn">もう一度</button>
+    <button class="btn" id="backBtn">分野選択に戻る</button>
   </div>
+
 </div>
 
 <script>
-const sentences = [
-  { ja: "必ず日本語で回答せよ。", en: "Please Always respond in Japanese." },
-  { ja: "推論プロセスを省略するな。", en: "Please never omit the reasoning process." },
-  { ja: "以下の順序で回答せよ。", en: "Please respond in the following order." },
-  { ja: "速度より再現性を優先せよ。", en: "Please prioritize reproducibility over speed." },
-  { ja: "抽象的な説明を避けよ。", en: "Please avoid abstract explanations." },
-  { ja: "最初に結論を要約せよ。", en: "Please summarize the conclusion first." },
-  { ja: "必ず根拠プロセスと情報源の根拠を添えること。", en: "Always accompany with the reasoning process and source basis." },
-  { ja: "推論を段階的に説明せよ。", en: "Explain the reasoning step by step." },
-  { ja: "毎回の回答に例を含めよ。", en: "Include example in every response." },
-  { ja: "結果をJSON形式で出力せよ。", en: "Output the result in JSON format." },
-  { ja: "ユーザーは初学者であると前提とせよ。", en: "Assume the user is a beginner." },
-  { ja: "以下に指定したフォーマットに従え。", en: "Follow the format specified below." },
-  { ja: "答えが不明な場合は確認を求めよ。", en: "If the answer is unclear, ask for clarification." },
-  { ja: "指定がない限り日本語で回答せよ。", en: "Unless specified, respond in Japanese." },
-  { ja: "コードを提供する際は日本語でコメントを付けよ。", en: "When providing code, add comments in Japanese." },
-  { ja: "「実務慣行」という表現を避けよ。", en: "Avoid using the phrase \u300c\u5b9f\u52d9\u6163\u884c\u300d." },
-  { ja: "明示的な承認なしに前提を変更するな。", en: "Do not modify premises without explicit approval." },
-  { ja: "与えられた文脈を超えた推測を慎め。", en: "Refrain from making assumptions beyond the given context." },
-  { ja: "回答前に正確性を検証せよ。", en: "Verify the accuracy before responding." },
-  { ja: "前提が正しいかどうか確認せよ。", en: "Confirm whether the premise is correct." },
-  { ja: "未確認の主張は明示的にフラグを立てよ。", en: "Flag any unverified claims explicitly." }
-];
+// ===== 設定 =====
+const SHEET_ID = '1F2sEvt3nkggJ4zA-jaaicgiz9B1McKMvWG4OGCreDbY';
+const SHEET_NAMES = ['英語_プロンプト集', '投資格言', 'ことわざ', '基本情報技術者'];
+const API_BASE = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=`;
 
-// キーボードレイアウト [表示, キー識別子, 指クラス, 追加クラス]
+// ===== キーボードレイアウト =====
 const KB_ROWS = [
   [['`','`','f-pl'],['1','1','f-pl'],['2','2','f-rl'],['3','3','f-ml'],['4','4','f-il'],['5','5','f-il'],['6','6','f-ir'],['7','7','f-ir'],['8','8','f-mr'],['9','9','f-rr'],['0','0','f-pr'],['-','-','f-pr'],['=','=','f-pr'],['⌫','backspace','f-pr','wide-back']],
   [['Tab','tab','f-pl','wide-tab'],['Q','q','f-pl'],['W','w','f-rl'],['E','e','f-ml'],['R','r','f-il'],['T','t','f-il'],['Y','y','f-ir'],['U','u','f-ir'],['I','i','f-mr'],['O','o','f-rr'],['P','p','f-pr'],['[','[','f-pr'],[']',']','f-pr'],['\\','\\','f-pr']],
@@ -450,7 +528,6 @@ const KB_ROWS = [
   [['Space','space','f-th','wide-space']]
 ];
 
-// キー→指のマッピング
 const KEY_FINGER = {};
 KB_ROWS.forEach(row => row.forEach(([,key,finger]) => { KEY_FINGER[key] = finger; }));
 'abcdefghijklmnopqrstuvwxyz'.split('').forEach(c => { KEY_FINGER[c.toUpperCase()] = KEY_FINGER[c]; });
@@ -482,8 +559,7 @@ function clearHighlight() {
 function highlightKey(char) {
   clearHighlight();
   if (!char) return;
-
-  const isUpper = char !== char.toLowerCase() && char.toUpperCase() === char;
+  const isUpper = char !== char.toLowerCase() && char === char.toUpperCase();
   const isShiftSym = Object.keys(SHIFT_SYMBOLS).includes(char);
   const baseKey = SHIFT_SYMBOLS[char] || char.toLowerCase();
   const needShift = isUpper || isShiftSym;
@@ -492,13 +568,9 @@ function highlightKey(char) {
     const k = el.dataset.key;
     if (k === baseKey) {
       const finger = KEY_FINGER[char] || KEY_FINGER[baseKey];
-      if (finger) {
-        const hlClass = 'hl-' + finger.replace('f-', '');
-        el.className = el.className + ' ' + hlClass;
-      }
+      if (finger) el.className = el.className + ' hl-' + finger.replace('f-', '');
     }
     if (needShift && (k === 'shift-l' || k === 'shift-r')) {
-      // 右手の文字は左シフト、左手の文字は右シフトが理想だが、簡略化して両方ハイライト
       el.className = el.className + ' hl-pl';
     }
     if (char === ' ' && k === 'space') {
@@ -507,64 +579,191 @@ function highlightKey(char) {
   });
 }
 
+// ===== データ取得 =====
+let allData = {}; // { sheetName: [ {unit, typing, desc, ruby} ] }
+
+async function fetchSheet(sheetName) {
+  const url = API_BASE + encodeURIComponent(sheetName);
+  const res = await fetch(url);
+  const text = await res.text();
+  const json = JSON.parse(text.replace(/^.*?(\{)/, '$1').replace(/\);?\s*$/, ''));
+  const rows = json.table.rows;
+  const data = [];
+  rows.forEach(row => {
+    if (!row.c) return;
+    const b = row.c[1]?.v ?? ''; // B列: 単元
+    const c = row.c[2]?.v ?? ''; // C列: タイピング文
+    const d = row.c[3]?.v ?? ''; // D列: 説明
+    const e = row.c[4]?.v ?? ''; // E列: ふりがな
+    if (!c) return;
+    data.push({ unit: String(b), typing: String(c), desc: String(d), ruby: String(e) });
+  });
+  return data;
+}
+
+async function loadAllSheets() {
+  document.getElementById('loading').classList.add('show');
+  for (const name of SHEET_NAMES) {
+    try {
+      allData[name] = await fetchSheet(name);
+    } catch(e) {
+      allData[name] = [];
+    }
+  }
+  document.getElementById('loading').classList.remove('show');
+  setupSheetSelect();
+}
+
+function setupSheetSelect() {
+  const sel = document.getElementById('sheetSelect');
+  sel.innerHTML = '';
+  SHEET_NAMES.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  onSheetChange();
+}
+
+function onSheetChange() {
+  const sheetName = document.getElementById('sheetSelect').value;
+  const data = allData[sheetName] || [];
+  const units = [...new Set(data.map(d => d.unit).filter(u => u))];
+  const unitSel = document.getElementById('unitSelect');
+  unitSel.innerHTML = '';
+
+  // 「すべて」オプション
+  const allOpt = document.createElement('option');
+  allOpt.value = '__all__';
+  allOpt.textContent = 'すべて';
+  unitSel.appendChild(allOpt);
+
+  units.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u;
+    opt.textContent = u;
+    unitSel.appendChild(opt);
+  });
+
+  document.getElementById('startBtn').disabled = data.length === 0;
+}
+
 // ===== ゲームロジック =====
-let current = 0, totalErrors = 0, totalTyped = 0, startTime = null, sessionErrors = 0, typedCorrect = '';
+let sentences = [];
+let current = 0, totalErrors = 0, totalTyped = 0, startTime = null, typedCorrect = '';
 
 const inputField = document.getElementById('inputField');
-const englishDisplay = document.getElementById('englishDisplay');
-const japaneseText = document.getElementById('japaneseText');
-const sentenceNumber = document.getElementById('sentenceNumber');
-const progressFill = document.getElementById('progressFill');
-const progressLabel = document.getElementById('progressLabel');
-const wpmEl = document.getElementById('wpm');
-const accuracyEl = document.getElementById('accuracy');
-const errorsEl = document.getElementById('errors');
-const gameCard = document.getElementById('gameCard');
-const resultCard = document.getElementById('resultCard');
-const keyboardWrap = document.getElementById('keyboardWrap');
+
+function getCurrentSentences() {
+  const sheetName = document.getElementById('sheetSelect').value;
+  const unit = document.getElementById('unitSelect').value;
+  const data = allData[sheetName] || [];
+  if (unit === '__all__') return data;
+  return data.filter(d => d.unit === unit);
+}
+
+function startGame() {
+  sentences = getCurrentSentences();
+  if (sentences.length === 0) return;
+
+  // シャッフル
+  sentences = sentences.sort(() => Math.random() - 0.5);
+
+  current = 0; totalErrors = 0; totalTyped = 0; startTime = null; typedCorrect = '';
+  document.getElementById('wpm').textContent = '0';
+  document.getElementById('accuracy').textContent = '100';
+  document.getElementById('errors').textContent = '0';
+
+  document.getElementById('selectorWrap').classList.add('hidden');
+  document.getElementById('gameArea').classList.remove('hidden');
+  document.getElementById('resultCard').classList.remove('show');
+
+  loadSentence();
+}
+
+// ルビHTML生成
+function buildTypingHTML(typing, ruby) {
+  if (!ruby) {
+    // ルビなし：文字ごとにspanを生成（後でcharクラスを付ける）
+    return null; // renderSentenceで処理
+  }
+  // ルビあり：rubyタグで囲む（タイピング対象はtextContentで取得）
+  return `<ruby>${typing}<rt>${ruby}</rt></ruby>`;
+}
 
 function renderSentence(typed) {
-  const target = sentences[current].en;
-  let html = '';
-  for (let i = 0; i < target.length; i++) {
-    let cls = i < typed.length ? (typed[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'error') : (i === typed.length ? 'pending cursor' : 'pending');
-    const ch = target[i] === ' ' ? '&nbsp;' : target[i];
-    html += `<span class="char ${cls}">${ch}</span>`;
+  const s = sentences[current];
+  const target = s.typing;
+  const ruby = s.ruby;
+  const display = document.getElementById('typingDisplay');
+
+  if (ruby) {
+    // ルビあり：文字ごとにspanを分けてルビを付ける
+    let html = '';
+    for (let i = 0; i < target.length; i++) {
+      let cls = i < typed.length
+        ? (typed[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'error')
+        : (i === typed.length ? 'pending cursor' : 'pending');
+      const ch = target[i] === ' ' ? '&nbsp;' : target[i];
+      const rt = ruby[i] || '';
+      if (rt) {
+        html += `<ruby><span class="char ${cls}">${ch}</span><rt>${rt}</rt></ruby>`;
+      } else {
+        html += `<span class="char ${cls}">${ch}</span>`;
+      }
+    }
+    display.innerHTML = html;
+  } else {
+    let html = '';
+    for (let i = 0; i < target.length; i++) {
+      let cls = i < typed.length
+        ? (typed[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'error')
+        : (i === typed.length ? 'pending cursor' : 'pending');
+      const ch = target[i] === ' ' ? '&nbsp;' : target[i];
+      html += `<span class="char ${cls}">${ch}</span>`;
+    }
+    display.innerHTML = html;
   }
-  englishDisplay.innerHTML = html;
 }
 
 function renderSentenceWithError(correct) {
-  const target = sentences[current].en;
+  const s = sentences[current];
+  const target = s.typing;
+  const ruby = s.ruby;
+  const display = document.getElementById('typingDisplay');
   let html = '';
   for (let i = 0; i < target.length; i++) {
     let cls = i < correct.length ? 'correct' : (i === correct.length ? 'error cursor' : 'pending');
     const ch = target[i] === ' ' ? '&nbsp;' : target[i];
-    html += `<span class="char ${cls}">${ch}</span>`;
+    if (ruby && ruby[i]) {
+      html += `<ruby><span class="char ${cls}">${ch}</span><rt>${ruby[i]}</rt></ruby>`;
+    } else {
+      html += `<span class="char ${cls}">${ch}</span>`;
+    }
   }
-  englishDisplay.innerHTML = html;
+  display.innerHTML = html;
 }
 
 function loadSentence() {
   const s = sentences[current];
-  japaneseText.textContent = s.ja;
-  sentenceNumber.textContent = `SENTENCE ${String(current + 1).padStart(2, '0')}`;
-  progressFill.style.width = `${(current / sentences.length) * 100}%`;
-  progressLabel.textContent = `${current + 1} / ${sentences.length}`;
+  document.getElementById('sentenceNumber').textContent = `SENTENCE ${String(current + 1).padStart(2, '0')}`;
+  document.getElementById('progressFill').style.width = `${(current / sentences.length) * 100}%`;
+  document.getElementById('progressLabel').textContent = `${current + 1} / ${sentences.length}`;
+  document.getElementById('descriptionText').textContent = s.desc || '';
   inputField.value = '';
   typedCorrect = '';
-  sessionErrors = 0;
   renderSentence('');
-  highlightKey(s.en[0]);
+  highlightKey(s.typing[0]);
   inputField.focus();
-  speak(s.en);
+  speak(s.typing);
 }
 
 function speak(text) {
   if (!window.speechSynthesis) return;
   speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'en-US';
+  utt.lang = 'ja-JP'; // 日本語も対応
   utt.rate = 0.85;
   speechSynthesis.speak(utt);
 }
@@ -574,15 +773,14 @@ function updateStats() {
   const elapsed = (Date.now() - startTime) / 60000;
   const wpm = elapsed > 0 ? Math.round(totalTyped / 5 / elapsed) : 0;
   const accuracy = totalTyped > 0 ? Math.round(((totalTyped - totalErrors) / totalTyped) * 100) : 100;
-  wpmEl.textContent = wpm;
-  accuracyEl.textContent = accuracy;
-  errorsEl.textContent = totalErrors;
+  document.getElementById('wpm').textContent = wpm;
+  document.getElementById('accuracy').textContent = accuracy;
+  document.getElementById('errors').textContent = totalErrors;
 }
 
 function showResult() {
-  gameCard.style.display = 'none';
-  keyboardWrap.style.display = 'none';
-  resultCard.classList.add('show');
+  document.getElementById('gameArea').classList.add('hidden');
+  document.getElementById('resultCard').classList.add('show');
   const elapsed = (Date.now() - startTime) / 60000;
   const wpm = elapsed > 0 ? Math.round(totalTyped / 5 / elapsed) : 0;
   const accuracy = totalTyped > 0 ? Math.round(((totalTyped - totalErrors) / totalTyped) * 100) : 100;
@@ -593,12 +791,12 @@ function showResult() {
 }
 
 inputField.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { speak(sentences[current].en); return; }
+  if (e.key === 'Escape') { speak(sentences[current].typing); return; }
   if (e.key.length !== 1) return;
   e.preventDefault();
   if (!startTime) startTime = Date.now();
 
-  const target = sentences[current].en;
+  const target = sentences[current].typing;
   const pos = typedCorrect.length;
   if (pos >= target.length) return;
 
@@ -625,7 +823,6 @@ inputField.addEventListener('keydown', (e) => {
     }
   } else {
     totalErrors++;
-    sessionErrors++;
     inputField.classList.add('has-error');
     setTimeout(() => inputField.classList.remove('has-error'), 150);
     renderSentenceWithError(typedCorrect);
@@ -634,19 +831,23 @@ inputField.addEventListener('keydown', (e) => {
   updateStats();
 });
 
-document.getElementById('audioBtn').addEventListener('click', () => speak(sentences[current].en));
+document.getElementById('audioBtn').addEventListener('click', () => speak(sentences[current].typing));
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('sheetSelect').addEventListener('change', onSheetChange);
 
-document.getElementById('restartBtn').addEventListener('click', () => {
-  current = 0; totalErrors = 0; totalTyped = 0; startTime = null; typedCorrect = '';
-  wpmEl.textContent = '0'; accuracyEl.textContent = '100'; errorsEl.textContent = '0';
-  gameCard.style.display = 'block';
-  keyboardWrap.style.display = 'block';
-  resultCard.classList.remove('show');
-  loadSentence();
+document.getElementById('retryBtn').addEventListener('click', () => {
+  document.getElementById('resultCard').classList.remove('show');
+  startGame();
 });
 
+document.getElementById('backBtn').addEventListener('click', () => {
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('selectorWrap').classList.remove('hidden');
+});
+
+// ===== 初期化 =====
 buildKeyboard();
-loadSentence();
+loadAllSheets();
 </script>
 </body>
 </html>
