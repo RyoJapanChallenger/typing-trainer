@@ -479,6 +479,15 @@
     margin-bottom: 1rem;
   }
 
+  .romaji-buf {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85em;
+    color: var(--accent);
+    border-bottom: 1px dashed var(--accent);
+    margin-left: 2px;
+    letter-spacing: 0.05em;
+  }
+
   .hidden { display: none !important; }
 </style>
 </head>
@@ -736,10 +745,126 @@ function onSheetChange() {
   document.getElementById('startBtn').disabled = data.length === 0;
 }
 
+// ===== ローマ字→かな変換テーブル =====
+const ROMAJI_TABLE = (() => {
+  const t = {};
+  // 基本母音
+  const V = {a:'あ',i:'い',u:'う',e:'え',o:'お'};
+  // 子音マップ
+  const C = {
+    k:{a:'か',i:'き',u:'く',e:'け',o:'こ'},
+    g:{a:'が',i:'ぎ',u:'ぐ',e:'げ',o:'ご'},
+    s:{a:'さ',i:'し',u:'す',e:'せ',o:'そ'},
+    z:{a:'ざ',i:'じ',u:'ず',e:'ぜ',o:'ぞ'},
+    t:{a:'た',i:'ち',u:'つ',e:'て',o:'と'},
+    d:{a:'だ',i:'ぢ',u:'づ',e:'で',o:'ど'},
+    n:{a:'な',i:'に',u:'ぬ',e:'ね',o:'の'},
+    h:{a:'は',i:'ひ',u:'ふ',e:'へ',o:'ほ'},
+    b:{a:'ば',i:'び',u:'ぶ',e:'べ',o:'ぼ'},
+    p:{a:'ぱ',i:'ぴ',u:'ぷ',e:'ぺ',o:'ぽ'},
+    m:{a:'ま',i:'み',u:'む',e:'め',o:'も'},
+    y:{a:'や',u:'ゆ',o:'よ'},
+    r:{a:'ら',i:'り',u:'る',e:'れ',o:'ろ'},
+    w:{a:'わ',i:'ゐ',e:'ゑ',o:'を'},
+    f:{a:'ふぁ',i:'ふぃ',u:'ふ',e:'ふぇ',o:'ふぉ'},
+    v:{a:'ゔぁ',i:'ゔぃ',u:'ゔ',e:'ゔぇ',o:'ゔぉ'},
+  };
+  // 拗音
+  const YO = {
+    ky:{a:'きゃ',u:'きゅ',o:'きょ'}, gy:{a:'ぎゃ',u:'ぎゅ',o:'ぎょ'},
+    sy:{a:'しゃ',u:'しゅ',o:'しょ'}, zy:{a:'じゃ',u:'じゅ',o:'じょ'},
+    ty:{a:'ちゃ',u:'ちゅ',o:'ちょ'}, dy:{a:'ぢゃ',u:'ぢゅ',o:'ぢょ'},
+    ny:{a:'にゃ',u:'にゅ',o:'にょ'}, hy:{a:'ひゃ',u:'ひゅ',o:'ひょ'},
+    by:{a:'びゃ',u:'びゅ',o:'びょ'}, py:{a:'ぴゃ',u:'ぴゅ',o:'ぴょ'},
+    my:{a:'みゃ',u:'みゅ',o:'みょ'}, ry:{a:'りゃ',u:'りゅ',o:'りょ'},
+  };
+  // 特殊
+  const SP = {
+    shi:'し', chi:'ち', tsu:'つ', fu:'ふ',
+    sha:'しゃ', shu:'しゅ', sho:'しょ',
+    cha:'ちゃ', chu:'ちゅ', cho:'ちょ',
+    ja:'じゃ', ji:'じ', ju:'じゅ', jo:'じょ',
+    tchi:'っち', ttsu:'っつ',
+    nn:'ん', xn:'ん',
+    xa:'ぁ', xi:'ぃ', xu:'ぅ', xe:'ぇ', xo:'ぉ',
+    xya:'ゃ', xyu:'ゅ', xyo:'ょ',
+    xtu:'っ', xtsu:'っ', ltu:'っ', ltsu:'っ',
+    wa:'わ', wi:'ゐ', we:'ゑ', wo:'を',
+    fa:'ふぁ', fi:'ふぃ', fe:'ふぇ', fo:'ふぉ',
+    di:'ぢ', du:'づ', ti:'ち', tu:'つ',
+    si:'し', su:'す',
+  };
+  // 母音
+  Object.assign(t, V);
+  // 子音+母音
+  for (const [c, map] of Object.entries(C)) {
+    for (const [v, kana] of Object.entries(map)) t[c+v] = kana;
+  }
+  // 拗音
+  for (const [c, map] of Object.entries(YO)) {
+    for (const [v, kana] of Object.entries(map)) t[c+v] = kana;
+  }
+  // 特殊
+  Object.assign(t, SP);
+  // ん（次が子音または文末）
+  t['n'] = 'ん_pending'; // 特別処理
+  return t;
+})();
+
+// ローマ字バッファ→かな変換（最長一致）
+function romajiToKana(buf) {
+  // 促音（同じ子音が重なる場合）
+  if (buf.length >= 2 && buf[0] === buf[1] && buf[0] !== 'n' && 'bcdfghjklmpqrstvwxyz'.includes(buf[0])) {
+    const rest = romajiToKana(buf.slice(1));
+    if (rest !== null) return 'っ' + rest;
+  }
+  // 最長一致
+  for (let len = Math.min(buf.length, 4); len >= 1; len--) {
+    const key = buf.slice(0, len);
+    if (ROMAJI_TABLE[key] !== undefined && ROMAJI_TABLE[key] !== 'ん_pending') {
+      return ROMAJI_TABLE[key];
+    }
+  }
+  return null;
+}
+
+// ローマ字バッファが「ん」確定かどうか
+function isNConfirmed(buf, nextChar) {
+  if (buf === 'n' || buf === 'nn') {
+    if (!nextChar || !'aiueoyn'.includes(nextChar)) return true;
+  }
+  return false;
+}
+
+// テキストが日本語（ひらがな・カタカナ・漢字）を含むか判定
+function isJapanese(text) {
+  return /[\u3040-\u30ff\u4e00-\u9fff]/.test(text);
+}
+
+// かな1文字に対応するローマ字パターン一覧（複数対応）
+const KANA_ROMAJI = (() => {
+  const map = {};
+  const entries = Object.entries(ROMAJI_TABLE).filter(([,v]) => v !== 'ん_pending');
+  for (const [r, k] of entries) {
+    if (!map[k]) map[k] = [];
+    map[k].push(r);
+  }
+  // ん
+  map['ん'] = ['n', 'nn'];
+  // っ（次の子音を重ねる形は動的処理）
+  map['っ'] = ['ltu', 'xtu', 'ltsu', 'xtsu'];
+  return map;
+})();
+
 // ===== ゲームロジック =====
 let sentences = [];
 let current = 0, totalErrors = 0, totalTyped = 0, startTime = null, typedCorrect = '';
 let isPaused = false;
+
+// 日本語モード用
+let romajiBuffer = '';      // 現在入力中のローマ字バッファ
+let kanaProgress = [];      // 確定したかな文字の配列（ターゲットかなに対して何文字確定したか）
+let targetKana = [];        // ターゲットをかな配列に分解したもの
 
 const inputField = document.getElementById('inputField');
 
@@ -754,68 +879,84 @@ function getCurrentSentences() {
 function startGame() {
   sentences = getCurrentSentences();
   if (sentences.length === 0) return;
-
-  // シャッフル
   sentences = sentences.sort(() => Math.random() - 0.5);
-
   current = 0; totalErrors = 0; totalTyped = 0; startTime = null; typedCorrect = ''; isPaused = false;
   document.getElementById('wpm').textContent = '0';
   document.getElementById('accuracy').textContent = '100';
   document.getElementById('errors').textContent = '0';
-
   document.getElementById('selectorWrap').classList.add('hidden');
   document.getElementById('gameArea').classList.remove('hidden');
   document.getElementById('resultCard').classList.remove('show');
-
   loadSentence();
 }
 
-// ルビHTML生成
-function buildTypingHTML(typing, ruby) {
-  if (!ruby) {
-    // ルビなし：文字ごとにspanを生成（後でcharクラスを付ける）
-    return null; // renderSentenceで処理
+// かな文字列を1文字ずつ配列に分解（拗音は2文字を1単位にしない→1文字ずつ）
+function splitKana(text) {
+  return [...text];
+}
+
+// ターゲットが日本語かどうか
+function currentIsJapanese() {
+  return isJapanese(sentences[current].typing);
+}
+
+// ===== 表示系 =====
+function renderJapanese() {
+  const s = sentences[current];
+  const target = s.typing;
+  const chars = [...target];
+  const display = document.getElementById('typingDisplay');
+  const confirmedCount = kanaProgress.length;
+  let html = '';
+
+  // ローマ字バッファ表示エリア
+  const bufDisplay = romajiBuffer ? `<span class="romaji-buf">${romajiBuffer}</span>` : '';
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i] === ' ' ? '&nbsp;' : chars[i];
+    let cls;
+    if (i < confirmedCount) {
+      cls = 'correct';
+    } else if (i === confirmedCount) {
+      cls = 'pending cursor';
+    } else {
+      cls = 'pending';
+    }
+    const ruby = s.ruby ? s.ruby[i] || '' : '';
+    if (ruby) {
+      html += `<ruby><span class="char ${cls}">${ch}</span><rt>${ruby}</rt></ruby>`;
+    } else {
+      html += `<span class="char ${cls}">${ch}</span>`;
+    }
   }
-  // ルビあり：rubyタグで囲む（タイピング対象はtextContentで取得）
-  return `<ruby>${typing}<rt>${ruby}</rt></ruby>`;
+
+  // ローマ字バッファを表示
+  display.innerHTML = html + bufDisplay;
 }
 
 function renderSentence(typed) {
+  if (currentIsJapanese()) { renderJapanese(); return; }
   const s = sentences[current];
   const target = s.typing;
   const ruby = s.ruby;
   const display = document.getElementById('typingDisplay');
-
-  if (ruby) {
-    // ルビあり：文字ごとにspanを分けてルビを付ける
-    let html = '';
-    for (let i = 0; i < target.length; i++) {
-      let cls = i < typed.length
-        ? (typed[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'error')
-        : (i === typed.length ? 'pending cursor' : 'pending');
-      const ch = target[i] === ' ' ? '&nbsp;' : target[i];
-      const rt = ruby[i] || '';
-      if (rt) {
-        html += `<ruby><span class="char ${cls}">${ch}</span><rt>${rt}</rt></ruby>`;
-      } else {
-        html += `<span class="char ${cls}">${ch}</span>`;
-      }
-    }
-    display.innerHTML = html;
-  } else {
-    let html = '';
-    for (let i = 0; i < target.length; i++) {
-      let cls = i < typed.length
-        ? (typed[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'error')
-        : (i === typed.length ? 'pending cursor' : 'pending');
-      const ch = target[i] === ' ' ? '&nbsp;' : target[i];
+  let html = '';
+  for (let i = 0; i < target.length; i++) {
+    let cls = i < typed.length
+      ? (typed[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'error')
+      : (i === typed.length ? 'pending cursor' : 'pending');
+    const ch = target[i] === ' ' ? '&nbsp;' : target[i];
+    if (ruby && ruby[i]) {
+      html += `<ruby><span class="char ${cls}">${ch}</span><rt>${ruby[i]}</rt></ruby>`;
+    } else {
       html += `<span class="char ${cls}">${ch}</span>`;
     }
-    display.innerHTML = html;
   }
+  display.innerHTML = html;
 }
 
 function renderSentenceWithError(correct) {
+  if (currentIsJapanese()) { renderJapanese(); return; }
   const s = sentences[current];
   const target = s.typing;
   const ruby = s.ruby;
@@ -841,8 +982,12 @@ function loadSentence() {
   document.getElementById('descriptionText').textContent = s.desc || '';
   inputField.value = '';
   typedCorrect = '';
+  romajiBuffer = '';
+  kanaProgress = [];
+  targetKana = splitKana(s.typing);
   renderSentence('');
-  highlightKey(s.typing[0]);
+  if (!currentIsJapanese()) highlightKey(s.typing[0]);
+  else clearHighlight();
   inputField.focus();
   speak(s.typing);
 }
@@ -851,7 +996,7 @@ function speak(text) {
   if (!window.speechSynthesis) return;
   speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'ja-JP'; // 日本語も対応
+  utt.lang = isJapanese(text) ? 'ja-JP' : 'en-US';
   utt.rate = 0.85;
   speechSynthesis.speak(utt);
 }
@@ -878,6 +1023,150 @@ function showResult() {
   clearHighlight();
 }
 
+// ===== 日本語入力処理 =====
+function handleJapaneseKey(key) {
+  if (!startTime) startTime = Date.now();
+  const target = sentences[current].typing;
+  const chars = [...target];
+  const pos = kanaProgress.length;
+  if (pos >= chars.length) return;
+
+  const expectedKana = chars[pos];
+
+  // スペースはそのまま
+  if (expectedKana === '　' || expectedKana === ' ') {
+    if (key === ' ') {
+      kanaProgress.push(expectedKana);
+      romajiBuffer = '';
+      totalTyped++;
+      renderJapanese();
+      checkJapaneseComplete();
+    } else {
+      totalErrors++;
+      totalTyped++;
+      flashError();
+    }
+    updateStats();
+    return;
+  }
+
+  romajiBuffer += key;
+  totalTyped++;
+
+  // 促音の先行入力チェック（例：っ → 次の子音を重ねる）
+  if (expectedKana === 'っ') {
+    // ltu/xtu/ltsu/xtsuで確定
+    const tsuMatch = ['ltu','xtu','ltsu','xtsu'].find(r => romajiBuffer === r);
+    if (tsuMatch) {
+      kanaProgress.push('っ');
+      romajiBuffer = '';
+      renderJapanese();
+      checkJapaneseComplete();
+      updateStats();
+      return;
+    }
+    // 同子音重ねの場合：バッファの1文字目と2文字目が同じ子音
+    if (romajiBuffer.length >= 2 && romajiBuffer[0] === romajiBuffer[1]) {
+      kanaProgress.push('っ');
+      romajiBuffer = romajiBuffer.slice(1); // 残りのバッファで次の文字処理
+      // 再帰的に残りを処理
+      const remaining = romajiBuffer;
+      romajiBuffer = '';
+      for (const c of remaining) handleJapaneseKey(c);
+      return;
+    }
+    // まだ確定できない
+    if (romajiBuffer.length > 4) {
+      totalErrors++;
+      flashError();
+      romajiBuffer = '';
+    }
+    renderJapanese();
+    updateStats();
+    return;
+  }
+
+  // ん の処理
+  if (expectedKana === 'ん') {
+    const nextKana = chars[pos + 1];
+    const nextRomaji = nextKana ? (KANA_ROMAJI[nextKana] || [''])[0][0] : null;
+    if (isNConfirmed(romajiBuffer, nextRomaji)) {
+      kanaProgress.push('ん');
+      romajiBuffer = '';
+      renderJapanese();
+      checkJapaneseComplete();
+      updateStats();
+      return;
+    }
+    if (romajiBuffer.length > 2) {
+      totalErrors++;
+      flashError();
+      romajiBuffer = '';
+    }
+    renderJapanese();
+    updateStats();
+    return;
+  }
+
+  // 通常のかな変換（最長一致）
+  const converted = romajiToKana(romajiBuffer);
+  if (converted !== null) {
+    if (converted === expectedKana) {
+      // 正解
+      kanaProgress.push(expectedKana);
+      romajiBuffer = '';
+      renderJapanese();
+      checkJapaneseComplete();
+    } else {
+      // 変換結果が違う文字
+      totalErrors++;
+      flashError();
+      romajiBuffer = '';
+      renderJapanese();
+    }
+  } else {
+    // まだ変換できない（入力途中）or 変換不可
+    // バッファが長すぎる場合はエラー
+    if (romajiBuffer.length > 4) {
+      totalErrors++;
+      flashError();
+      romajiBuffer = '';
+      renderJapanese();
+    }
+    // 変換候補がありえないパターンを弾く
+    const possible = Object.keys(ROMAJI_TABLE).some(r => r.startsWith(romajiBuffer));
+    if (!possible) {
+      totalErrors++;
+      flashError();
+      romajiBuffer = '';
+      renderJapanese();
+    }
+  }
+  updateStats();
+}
+
+function checkJapaneseComplete() {
+  const target = sentences[current].typing;
+  const chars = [...target];
+  if (kanaProgress.length >= chars.length) {
+    clearHighlight();
+    inputField.classList.add('flash-correct');
+    setTimeout(() => {
+      inputField.classList.remove('flash-correct');
+      romajiBuffer = '';
+      kanaProgress = [];
+      current++;
+      if (current >= sentences.length) showResult();
+      else loadSentence();
+    }, 300);
+  }
+}
+
+function flashError() {
+  inputField.classList.add('has-error');
+  setTimeout(() => inputField.classList.remove('has-error'), 150);
+}
+
 inputField.addEventListener('keydown', (e) => {
   if (isPaused) return;
   if (e.key === 'Escape') { speak(sentences[current].typing); return; }
@@ -885,6 +1174,13 @@ inputField.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (!startTime) startTime = Date.now();
 
+  // 日本語モード
+  if (currentIsJapanese()) {
+    handleJapaneseKey(e.key.toLowerCase());
+    return;
+  }
+
+  // 英語モード（従来通り）
   const target = sentences[current].typing;
   const pos = typedCorrect.length;
   if (pos >= target.length) return;
