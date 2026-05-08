@@ -986,8 +986,15 @@ function loadSentence() {
   kanaProgress = [];
   targetKana = splitKana(s.typing);
   renderSentence('');
-  if (!currentIsJapanese()) highlightKey(s.typing[0]);
-  else clearHighlight();
+  if (currentIsJapanese()) {
+    // 最初のかなに対応するローマ字の先頭キーをハイライト
+    const firstKana = targetKana[0];
+    const options = KANA_ROMAJI[firstKana];
+    if (options && options[0]) highlightKey(options[0][0]);
+    else clearHighlight();
+  } else {
+    highlightKey(s.typing[0]);
+  }
   inputField.focus();
   speak(s.typing);
 }
@@ -1024,6 +1031,22 @@ function showResult() {
 }
 
 // ===== 日本語入力処理 =====
+function getNextRomajiHint() {
+  const target = sentences[current].typing;
+  const chars = [...target];
+  const pos = kanaProgress.length;
+  if (pos >= chars.length) return null;
+  const kana = chars[pos];
+  const options = KANA_ROMAJI[kana];
+  if (!options || options.length === 0) return null;
+  // バッファに合うものを優先
+  if (romajiBuffer) {
+    const matching = options.find(r => r.startsWith(romajiBuffer));
+    if (matching) return matching[romajiBuffer.length] || null;
+  }
+  return options[0][0] || null;
+}
+
 function handleJapaneseKey(key) {
   if (!startTime) startTime = Date.now();
   const target = sentences[current].typing;
@@ -1033,116 +1056,134 @@ function handleJapaneseKey(key) {
 
   const expectedKana = chars[pos];
 
-  // スペースはそのまま
-  if (expectedKana === '　' || expectedKana === ' ') {
+  // スペース処理
+  if (expectedKana === ' ' || expectedKana === '　') {
+    totalTyped++;
     if (key === ' ') {
       kanaProgress.push(expectedKana);
       romajiBuffer = '';
-      totalTyped++;
       renderJapanese();
+      highlightKey(getNextRomajiHint());
       checkJapaneseComplete();
     } else {
       totalErrors++;
-      totalTyped++;
       flashError();
+      renderJapanese();
     }
     updateStats();
     return;
   }
 
-  romajiBuffer += key;
-  totalTyped++;
+  // バッファにキーを追加
+  const newBuf = romajiBuffer + key;
 
-  // 促音の先行入力チェック（例：っ → 次の子音を重ねる）
+  // 促音（っ）：同子音重ねパターン
+  if (expectedKana === 'っ' && newBuf.length >= 2 && newBuf[0] === newBuf[1]) {
+    totalTyped++;
+    kanaProgress.push('っ');
+    romajiBuffer = newBuf.slice(1); // 2文字目以降を次の処理へ
+    renderJapanese();
+    // 残りバッファを処理
+    const remaining = romajiBuffer;
+    romajiBuffer = '';
+    for (const c of remaining) handleJapaneseKey(c);
+    return;
+  }
+
+  // 促音（っ）：ltu/xtu等
   if (expectedKana === 'っ') {
-    // ltu/xtu/ltsu/xtsuで確定
-    const tsuMatch = ['ltu','xtu','ltsu','xtsu'].find(r => romajiBuffer === r);
-    if (tsuMatch) {
+    const tsuList = ['ltu','xtu','ltsu','xtsu'];
+    const match = tsuList.find(r => r === newBuf);
+    if (match) {
+      totalTyped++;
       kanaProgress.push('っ');
       romajiBuffer = '';
       renderJapanese();
+      highlightKey(getNextRomajiHint());
       checkJapaneseComplete();
       updateStats();
       return;
     }
-    // 同子音重ねの場合：バッファの1文字目と2文字目が同じ子音
-    if (romajiBuffer.length >= 2 && romajiBuffer[0] === romajiBuffer[1]) {
-      kanaProgress.push('っ');
-      romajiBuffer = romajiBuffer.slice(1); // 残りのバッファで次の文字処理
-      // 再帰的に残りを処理
-      const remaining = romajiBuffer;
-      romajiBuffer = '';
-      for (const c of remaining) handleJapaneseKey(c);
+    if (tsuList.some(r => r.startsWith(newBuf))) {
+      totalTyped++;
+      romajiBuffer = newBuf;
+      renderJapanese();
+      updateStats();
       return;
     }
-    // まだ確定できない
-    if (romajiBuffer.length > 4) {
-      totalErrors++;
-      flashError();
-      romajiBuffer = '';
-    }
-    renderJapanese();
-    updateStats();
-    return;
   }
 
-  // ん の処理
+  // ん処理
   if (expectedKana === 'ん') {
-    const nextKana = chars[pos + 1];
-    const nextRomaji = nextKana ? (KANA_ROMAJI[nextKana] || [''])[0][0] : null;
-    if (isNConfirmed(romajiBuffer, nextRomaji)) {
+    if (newBuf === 'n') {
+      const nextKana = chars[pos + 1];
+      const nextFirst = nextKana ? (KANA_ROMAJI[nextKana] || ['a'])[0][0] : null;
+      if (!nextFirst || !'aiueoyn'.includes(nextFirst)) {
+        // 次が母音・y・n以外 → ん確定
+        totalTyped++;
+        kanaProgress.push('ん');
+        romajiBuffer = '';
+        renderJapanese();
+        highlightKey(getNextRomajiHint());
+        checkJapaneseComplete();
+        updateStats();
+        return;
+      }
+      // まだ確定できない
+      totalTyped++;
+      romajiBuffer = newBuf;
+      renderJapanese();
+      updateStats();
+      return;
+    }
+    if (newBuf === 'nn') {
+      totalTyped++;
       kanaProgress.push('ん');
       romajiBuffer = '';
       renderJapanese();
+      highlightKey(getNextRomajiHint());
       checkJapaneseComplete();
       updateStats();
       return;
     }
-    if (romajiBuffer.length > 2) {
+  }
+
+  // 通常変換：最長一致
+  const converted = romajiToKana(newBuf);
+  if (converted !== null) {
+    totalTyped++;
+    if (converted === expectedKana) {
+      kanaProgress.push(expectedKana);
+      romajiBuffer = '';
+      renderJapanese();
+      highlightKey(getNextRomajiHint());
+      checkJapaneseComplete();
+    } else {
       totalErrors++;
       flashError();
       romajiBuffer = '';
+      renderJapanese();
     }
-    renderJapanese();
     updateStats();
     return;
   }
 
-  // 通常のかな変換（最長一致）
-  const converted = romajiToKana(romajiBuffer);
-  if (converted !== null) {
-    if (converted === expectedKana) {
-      // 正解
-      kanaProgress.push(expectedKana);
-      romajiBuffer = '';
-      renderJapanese();
-      checkJapaneseComplete();
-    } else {
-      // 変換結果が違う文字
-      totalErrors++;
-      flashError();
-      romajiBuffer = '';
-      renderJapanese();
-    }
+  // 変換途中かチェック
+  const isPossible = Object.keys(ROMAJI_TABLE).some(r => r.startsWith(newBuf));
+  if (isPossible) {
+    totalTyped++;
+    romajiBuffer = newBuf;
+    renderJapanese();
+    updateStats();
   } else {
-    // まだ変換できない（入力途中）or 変換不可
-    // バッファが長すぎる場合はエラー
-    if (romajiBuffer.length > 4) {
-      totalErrors++;
-      flashError();
-      romajiBuffer = '';
-      renderJapanese();
-    }
-    // 変換候補がありえないパターンを弾く
-    const possible = Object.keys(ROMAJI_TABLE).some(r => r.startsWith(romajiBuffer));
-    if (!possible) {
-      totalErrors++;
-      flashError();
-      romajiBuffer = '';
-      renderJapanese();
-    }
+    // 変換不可能なパターン
+    totalTyped++;
+    totalErrors++;
+    flashError();
+    romajiBuffer = '';
+    renderJapanese();
+    updateStats();
   }
-  updateStats();
 }
 
 function checkJapaneseComplete() {
