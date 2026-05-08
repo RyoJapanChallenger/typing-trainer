@@ -656,6 +656,43 @@ function clearHighlight() {
 function highlightKey(char) {
   clearHighlight();
   if (!char) return;
+
+  // 特殊キーの直接マッピング
+  const SPECIAL_KEY_MAP = {
+    ' ': { key: 'space', hl: 'hl-th' },
+    '\n': { key: 'enter', hl: 'hl-pr' },
+    '-': { key: '-', hl: 'hl-pr' },
+    '=': { key: '=', hl: 'hl-pr' },
+    '[': { key: '[', hl: 'hl-pr' },
+    ']': { key: ']', hl: 'hl-pr' },
+    '\\': { key: '\\', hl: 'hl-pr' },
+    ';': { key: ';', hl: 'hl-pr' },
+    "'": { key: "'", hl: 'hl-pr' },
+    ',': { key: ',', hl: 'hl-mr' },
+    '.': { key: '.', hl: 'hl-rr' },
+    '/': { key: '/', hl: 'hl-pr' },
+    '`': { key: '`', hl: 'hl-pl' },
+    '1': { key: '1', hl: 'hl-pl' },
+    '2': { key: '2', hl: 'hl-rl' },
+    '3': { key: '3', hl: 'hl-ml' },
+    '4': { key: '4', hl: 'hl-il' },
+    '5': { key: '5', hl: 'hl-il' },
+    '6': { key: '6', hl: 'hl-ir' },
+    '7': { key: '7', hl: 'hl-ir' },
+    '8': { key: '8', hl: 'hl-mr' },
+    '9': { key: '9', hl: 'hl-rr' },
+    '0': { key: '0', hl: 'hl-pr' },
+  };
+
+  // 特殊キーの処理
+  if (SPECIAL_KEY_MAP[char]) {
+    const { key, hl } = SPECIAL_KEY_MAP[char];
+    document.querySelectorAll('.kb-key').forEach(el => {
+      if (el.dataset.key === key) el.className = el.className + ' ' + hl;
+    });
+    return;
+  }
+
   const isUpper = char !== char.toLowerCase() && char === char.toUpperCase();
   const isShiftSym = Object.keys(SHIFT_SYMBOLS).includes(char);
   const baseKey = SHIFT_SYMBOLS[char] || char.toLowerCase();
@@ -669,9 +706,6 @@ function highlightKey(char) {
     }
     if (needShift && (k === 'shift-l' || k === 'shift-r')) {
       el.className = el.className + ' hl-pl';
-    }
-    if (char === ' ' && k === 'space') {
-      el.className = el.className + ' hl-th';
     }
   });
 }
