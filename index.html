@@ -895,33 +895,33 @@ function splitKana(text) {
   return [...text];
 }
 
-// ターゲットが日本語かどうか
+// ターゲットが日本語かどうか（F列のreadingで判定）
 function currentIsJapanese() {
-  return isJapanese(sentences[current].typing);
+  const s = sentences[current];
+  const reading = s.reading || s.display || '';
+  return isJapanese(reading) || reading !== '' && isJapanese(s.display || '');
 }
 
 // ===== 表示系 =====
 function renderJapanese() {
   const s = sentences[current];
-  const target = s.typing;
-  const chars = [...target];
-  const display = document.getElementById('typingDisplay');
+  const displayText = s.display || s.typing || '';
+  const readingText = s.reading || displayText;
+  const displayChars = [...displayText];
+  const readingChars = [...readingText];
+  const el = document.getElementById('typingDisplay');
   const confirmedCount = kanaProgress.length;
   let html = '';
 
-  // ローマ字バッファ表示エリア
   const bufDisplay = romajiBuffer ? `<span class="romaji-buf">${romajiBuffer}</span>` : '';
 
-  for (let i = 0; i < chars.length; i++) {
-    const ch = chars[i] === ' ' ? '&nbsp;' : chars[i];
+  for (let i = 0; i < displayChars.length; i++) {
+    const ch = displayChars[i] === ' ' ? '&nbsp;' : displayChars[i];
+    // 判定はreadingCharsのインデックスに対応
     let cls;
-    if (i < confirmedCount) {
-      cls = 'correct';
-    } else if (i === confirmedCount) {
-      cls = 'pending cursor';
-    } else {
-      cls = 'pending';
-    }
+    if (i < confirmedCount) cls = 'correct';
+    else if (i === confirmedCount) cls = 'pending cursor';
+    else cls = 'pending';
     const ruby = s.ruby ? s.ruby[i] || '' : '';
     if (ruby) {
       html += `<ruby><span class="char ${cls}">${ch}</span><rt>${ruby}</rt></ruby>`;
@@ -929,17 +929,15 @@ function renderJapanese() {
       html += `<span class="char ${cls}">${ch}</span>`;
     }
   }
-
-  // ローマ字バッファを表示
-  display.innerHTML = html + bufDisplay;
+  el.innerHTML = html + bufDisplay;
 }
 
 function renderSentence(typed) {
   if (currentIsJapanese()) { renderJapanese(); return; }
   const s = sentences[current];
-  const target = s.typing;
+  const target = s.display || s.typing || '';
   const ruby = s.ruby;
-  const display = document.getElementById('typingDisplay');
+  const el = document.getElementById('typingDisplay');
   let html = '';
   for (let i = 0; i < target.length; i++) {
     let cls = i < typed.length
@@ -952,15 +950,15 @@ function renderSentence(typed) {
       html += `<span class="char ${cls}">${ch}</span>`;
     }
   }
-  display.innerHTML = html;
+  el.innerHTML = html;
 }
 
 function renderSentenceWithError(correct) {
   if (currentIsJapanese()) { renderJapanese(); return; }
   const s = sentences[current];
-  const target = s.typing;
+  const target = s.display || s.typing || '';
   const ruby = s.ruby;
-  const display = document.getElementById('typingDisplay');
+  const el = document.getElementById('typingDisplay');
   let html = '';
   for (let i = 0; i < target.length; i++) {
     let cls = i < correct.length ? 'correct' : (i === correct.length ? 'error cursor' : 'pending');
@@ -971,11 +969,13 @@ function renderSentenceWithError(correct) {
       html += `<span class="char ${cls}">${ch}</span>`;
     }
   }
-  display.innerHTML = html;
+  el.innerHTML = html;
 }
 
 function loadSentence() {
   const s = sentences[current];
+  const displayText = s.display || s.typing || '';
+  const readingText = s.reading || displayText;
   document.getElementById('sentenceNumber').textContent = `SENTENCE ${String(current + 1).padStart(2, '0')}`;
   document.getElementById('progressFill').style.width = `${(current / sentences.length) * 100}%`;
   document.getElementById('progressLabel').textContent = `${current + 1} / ${sentences.length}`;
@@ -984,19 +984,18 @@ function loadSentence() {
   typedCorrect = '';
   romajiBuffer = '';
   kanaProgress = [];
-  targetKana = splitKana(s.typing);
+  targetKana = splitKana(readingText);
   renderSentence('');
   if (currentIsJapanese()) {
-    // 最初のかなに対応するローマ字の先頭キーをハイライト
     const firstKana = targetKana[0];
     const options = KANA_ROMAJI[firstKana];
     if (options && options[0]) highlightKey(options[0][0]);
     else clearHighlight();
   } else {
-    highlightKey(s.typing[0]);
+    highlightKey(displayText[0]);
   }
   inputField.focus();
-  speak(s.typing);
+  speak(displayText);
 }
 
 function speak(text) {
@@ -1049,11 +1048,9 @@ function getNextRomajiHint() {
 
 function handleJapaneseKey(key) {
   if (!startTime) startTime = Date.now();
-  const target = sentences[current].typing;
-  const chars = [...target];
+  const chars = targetKana; // loadSentenceでreadingから生成済み
   const pos = kanaProgress.length;
   if (pos >= chars.length) return;
-
   const expectedKana = chars[pos];
 
   // スペース処理
@@ -1187,9 +1184,7 @@ function handleJapaneseKey(key) {
 }
 
 function checkJapaneseComplete() {
-  const target = sentences[current].typing;
-  const chars = [...target];
-  if (kanaProgress.length >= chars.length) {
+  if (kanaProgress.length >= targetKana.length) {
     clearHighlight();
     inputField.classList.add('flash-correct');
     setTimeout(() => {
@@ -1210,7 +1205,7 @@ function flashError() {
 
 inputField.addEventListener('keydown', (e) => {
   if (isPaused) return;
-  if (e.key === 'Escape') { speak(sentences[current].typing); return; }
+  if (e.key === 'Escape') { speak(sentences[current].display || sentences[current].typing || ''); return; }
   if (e.key.length !== 1) return;
   e.preventDefault();
   if (!startTime) startTime = Date.now();
@@ -1222,7 +1217,7 @@ inputField.addEventListener('keydown', (e) => {
   }
 
   // 英語モード（従来通り）
-  const target = sentences[current].typing;
+  const target = sentences[current].display || sentences[current].typing || '';
   const pos = typedCorrect.length;
   if (pos >= target.length) return;
 
@@ -1288,7 +1283,7 @@ document.getElementById('pauseBackBtn').addEventListener('click', goToSelector);
 // 直接→分野選択に戻る
 document.getElementById('backToSelectBtn').addEventListener('click', goToSelector);
 
-document.getElementById('audioBtn').addEventListener('click', () => speak(sentences[current].typing));
+document.getElementById('audioBtn').addEventListener('click', () => speak(sentences[current].display || sentences[current].typing || ''));
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('sheetSelect').addEventListener('change', onSheetChange);
 
