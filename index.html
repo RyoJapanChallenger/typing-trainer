@@ -418,6 +418,67 @@
 
   .btn:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 20px var(--accent-dim); }
 
+  .game-controls { margin-bottom: 1.5rem; }
+
+  .progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.4rem;
+  }
+
+  .game-btns { display: flex; gap: 0.6rem; }
+
+  .game-ctrl-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.4rem 0.9rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .game-ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .game-ctrl-btn.danger:hover { border-color: var(--error); color: var(--error); }
+
+  /* 一時停止オーバーレイ */
+  .pause-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10,10,15,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+
+  .pause-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 3rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 280px;
+  }
+
+  .pause-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
   .hidden { display: none !important; }
 </style>
 </head>
@@ -455,10 +516,27 @@
 
   <!-- ゲーム -->
   <div id="gameArea" class="hidden">
-    <div class="progress-bar">
-      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    <div class="game-controls">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="progress-row">
+        <div class="progress-label" id="progressLabel">1 / 0</div>
+        <div class="game-btns">
+          <button class="game-ctrl-btn" id="pauseBtn">⏸ 一時停止</button>
+          <button class="game-ctrl-btn danger" id="backToSelectBtn">✕ 分野選択に戻る</button>
+        </div>
+      </div>
     </div>
-    <div class="progress-label" id="progressLabel">1 / 0</div>
+
+    <!-- 一時停止オーバーレイ -->
+    <div class="pause-overlay hidden" id="pauseOverlay">
+      <div class="pause-box">
+        <div class="pause-title">一時停止中</div>
+        <button class="btn" id="resumeBtn">▶ 再開</button>
+        <button class="btn" id="pauseBackBtn">分野選択に戻る</button>
+      </div>
+    </div>
 
     <div class="card" id="gameCard">
       <div class="sentence-number" id="sentenceNumber">SENTENCE 01</div>
@@ -661,6 +739,7 @@ function onSheetChange() {
 // ===== ゲームロジック =====
 let sentences = [];
 let current = 0, totalErrors = 0, totalTyped = 0, startTime = null, typedCorrect = '';
+let isPaused = false;
 
 const inputField = document.getElementById('inputField');
 
@@ -679,7 +758,7 @@ function startGame() {
   // シャッフル
   sentences = sentences.sort(() => Math.random() - 0.5);
 
-  current = 0; totalErrors = 0; totalTyped = 0; startTime = null; typedCorrect = '';
+  current = 0; totalErrors = 0; totalTyped = 0; startTime = null; typedCorrect = ''; isPaused = false;
   document.getElementById('wpm').textContent = '0';
   document.getElementById('accuracy').textContent = '100';
   document.getElementById('errors').textContent = '0';
@@ -800,6 +879,7 @@ function showResult() {
 }
 
 inputField.addEventListener('keydown', (e) => {
+  if (isPaused) return;
   if (e.key === 'Escape') { speak(sentences[current].typing); return; }
   if (e.key.length !== 1) return;
   e.preventDefault();
@@ -840,6 +920,37 @@ inputField.addEventListener('keydown', (e) => {
   updateStats();
 });
 
+function goToSelector() {
+  isPaused = false;
+  document.getElementById('pauseOverlay').classList.add('hidden');
+  document.getElementById('gameArea').classList.add('hidden');
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('selectorWrap').classList.remove('hidden');
+  clearHighlight();
+  speechSynthesis.cancel();
+}
+
+// 一時停止
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  isPaused = true;
+  speechSynthesis.cancel();
+  document.getElementById('pauseOverlay').classList.remove('hidden');
+  inputField.blur();
+});
+
+// 再開
+document.getElementById('resumeBtn').addEventListener('click', () => {
+  isPaused = false;
+  document.getElementById('pauseOverlay').classList.add('hidden');
+  inputField.focus();
+});
+
+// 一時停止後→分野選択に戻る
+document.getElementById('pauseBackBtn').addEventListener('click', goToSelector);
+
+// 直接→分野選択に戻る
+document.getElementById('backToSelectBtn').addEventListener('click', goToSelector);
+
 document.getElementById('audioBtn').addEventListener('click', () => speak(sentences[current].typing));
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('sheetSelect').addEventListener('change', onSheetChange);
@@ -849,10 +960,7 @@ document.getElementById('retryBtn').addEventListener('click', () => {
   startGame();
 });
 
-document.getElementById('backBtn').addEventListener('click', () => {
-  document.getElementById('resultCard').classList.remove('show');
-  document.getElementById('selectorWrap').classList.remove('hidden');
-});
+document.getElementById('backBtn').addEventListener('click', goToSelector);
 
 // ===== 初期化 =====
 buildKeyboard();
