@@ -898,8 +898,10 @@ function splitKana(text) {
 // ターゲットが日本語かどうか（F列のreadingで判定）
 function currentIsJapanese() {
   const s = sentences[current];
-  const reading = s.reading || s.display || '';
-  return isJapanese(reading) || reading !== '' && isJapanese(s.display || '');
+  const reading = s.reading || '';
+  // readingが空の場合はdisplayで判定
+  const checkText = reading || s.display || s.typing || '';
+  return isJapanese(checkText);
 }
 
 // ===== 表示系 =====
@@ -1218,6 +1220,7 @@ inputField.addEventListener('keydown', (e) => {
 
   // 英語モード（従来通り）
   const target = sentences[current].display || sentences[current].typing || '';
+  if (!target) return;
   const pos = typedCorrect.length;
   if (pos >= target.length) return;
 
