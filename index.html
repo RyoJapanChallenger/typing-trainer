@@ -626,7 +626,7 @@ async function loadAllSheets() {
 function setupSheetSelect() {
   const sel = document.getElementById('sheetSelect');
   sel.innerHTML = '';
-  SHEET_NAMES.forEach(name => {
+  Object.keys(allData).forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
     opt.textContent = name;
