@@ -194,11 +194,22 @@
   .description {
     font-size: 0.95rem;
     font-weight: 300;
-    color: var(--text);
+    color: var(--text-dim);
     line-height: 1.9;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.8rem;
     letter-spacing: 0.03em;
     white-space: pre-wrap;
+  }
+
+  /* C列：表示用テキスト（漢字混じり・ルビ付き） */
+  .display-text {
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 2.2;
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+    min-height: 1.5rem;
   }
 
   /* タイピング文（C列）ルビ付き */
@@ -550,6 +561,7 @@
     <div class="card" id="gameCard">
       <div class="sentence-number" id="sentenceNumber">SENTENCE 01</div>
       <div class="description" id="descriptionText"></div>
+      <div class="display-text" id="displayText"></div>
       <div class="typing-target" id="typingDisplay"></div>
       <div class="input-area">
         <input type="text" class="input-field" id="inputField"
@@ -906,40 +918,51 @@ function currentIsJapanese() {
 }
 
 // ===== 表示系 =====
-function renderJapanese() {
+function renderDisplayText() {
+  // C列をdisplay-textエリアに表示（カーソルなし・ルビ付き）
   const s = sentences[current];
-  const displayText = s.display || s.typing || '';
-  const readingText = s.reading || displayText;
-  const displayChars = [...displayText];
-  const readingChars = [...readingText];
+  const displayText = s.display || '';
+  const el = document.getElementById('displayText');
+  if (!displayText) { el.innerHTML = ''; return; }
+  const chars = [...displayText];
+  let html = '';
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i] === ' ' ? '&nbsp;' : chars[i];
+    const ruby = s.ruby ? s.ruby[i] || '' : '';
+    if (ruby) {
+      html += `<ruby>${ch}<rt>${ruby}</rt></ruby>`;
+    } else {
+      html += ch;
+    }
+  }
+  el.innerHTML = html;
+}
+
+function renderJapanese() {
+  // F列（reading）をタイピング判定エリアに表示（カーソルあり）
+  const s = sentences[current];
+  const readingChars = targetKana;
   const el = document.getElementById('typingDisplay');
   const confirmedCount = kanaProgress.length;
-  let html = '';
-
   const bufDisplay = romajiBuffer ? `<span class="romaji-buf">${romajiBuffer}</span>` : '';
-
-  for (let i = 0; i < displayChars.length; i++) {
-    const ch = displayChars[i] === ' ' ? '&nbsp;' : displayChars[i];
-    // 判定はreadingCharsのインデックスに対応
+  let html = '';
+  for (let i = 0; i < readingChars.length; i++) {
+    const ch = readingChars[i] === ' ' ? '&nbsp;' : readingChars[i];
     let cls;
     if (i < confirmedCount) cls = 'correct';
     else if (i === confirmedCount) cls = 'pending cursor';
     else cls = 'pending';
-    const ruby = s.ruby ? s.ruby[i] || '' : '';
-    if (ruby) {
-      html += `<ruby><span class="char ${cls}">${ch}</span><rt>${ruby}</rt></ruby>`;
-    } else {
-      html += `<span class="char ${cls}">${ch}</span>`;
-    }
+    html += `<span class="char ${cls}">${ch}</span>`;
   }
   el.innerHTML = html + bufDisplay;
 }
 
 function renderSentence(typed) {
-  if (currentIsJapanese()) { renderJapanese(); return; }
+  if (currentIsJapanese()) { renderDisplayText(); renderJapanese(); return; }
+  // 英語モード：C列とF列が同じなのでtypingDisplayにF列を表示
+  document.getElementById('displayText').innerHTML = '';
   const s = sentences[current];
-  const target = s.display || s.typing || '';
-  const ruby = s.ruby;
+  const target = s.reading || s.display || s.typing || '';
   const el = document.getElementById('typingDisplay');
   let html = '';
   for (let i = 0; i < target.length; i++) {
@@ -947,30 +970,22 @@ function renderSentence(typed) {
       ? (typed[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'error')
       : (i === typed.length ? 'pending cursor' : 'pending');
     const ch = target[i] === ' ' ? '&nbsp;' : target[i];
-    if (ruby && ruby[i]) {
-      html += `<ruby><span class="char ${cls}">${ch}</span><rt>${ruby[i]}</rt></ruby>`;
-    } else {
-      html += `<span class="char ${cls}">${ch}</span>`;
-    }
+    html += `<span class="char ${cls}">${ch}</span>`;
   }
   el.innerHTML = html;
 }
 
 function renderSentenceWithError(correct) {
-  if (currentIsJapanese()) { renderJapanese(); return; }
+  if (currentIsJapanese()) { renderDisplayText(); renderJapanese(); return; }
+  document.getElementById('displayText').innerHTML = '';
   const s = sentences[current];
-  const target = s.display || s.typing || '';
-  const ruby = s.ruby;
+  const target = s.reading || s.display || s.typing || '';
   const el = document.getElementById('typingDisplay');
   let html = '';
   for (let i = 0; i < target.length; i++) {
     let cls = i < correct.length ? 'correct' : (i === correct.length ? 'error cursor' : 'pending');
     const ch = target[i] === ' ' ? '&nbsp;' : target[i];
-    if (ruby && ruby[i]) {
-      html += `<ruby><span class="char ${cls}">${ch}</span><rt>${ruby[i]}</rt></ruby>`;
-    } else {
-      html += `<span class="char ${cls}">${ch}</span>`;
-    }
+    html += `<span class="char ${cls}">${ch}</span>`;
   }
   el.innerHTML = html;
 }
@@ -1218,8 +1233,8 @@ inputField.addEventListener('keydown', (e) => {
     return;
   }
 
-  // 英語モード（従来通り）
-  const target = sentences[current].display || sentences[current].typing || '';
+  // 英語モード：F列（reading）で判定
+  const target = sentences[current].reading || sentences[current].display || sentences[current].typing || '';
   if (!target) return;
   const pos = typedCorrect.length;
   if (pos >= target.length) return;
