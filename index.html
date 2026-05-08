@@ -892,6 +892,7 @@ function startGame() {
 
 // かな文字列を1文字ずつ配列に分解（拗音は2文字を1単位にしない→1文字ずつ）
 function splitKana(text) {
+  if (!text) return [];
   return [...text];
 }
 
@@ -1033,17 +1034,16 @@ function showResult() {
 
 // ===== 日本語入力処理 =====
 function getNextRomajiHint() {
-  const target = sentences[current].typing;
-  const chars = [...target];
   const pos = kanaProgress.length;
-  if (pos >= chars.length) return null;
-  const kana = chars[pos];
+  if (pos >= targetKana.length) return null;
+  const kana = targetKana[pos];
   const options = KANA_ROMAJI[kana];
   if (!options || options.length === 0) return null;
-  // バッファに合うものを優先
   if (romajiBuffer) {
     const matching = options.find(r => r.startsWith(romajiBuffer));
-    if (matching) return matching[romajiBuffer.length] || null;
+    if (matching && matching.length > romajiBuffer.length) {
+      return matching[romajiBuffer.length];
+    }
   }
   return options[0][0] || null;
 }
