@@ -515,9 +515,7 @@
 
 <script>
 // ===== 設定 =====
-const SHEET_ID = '1F2sEvt3nkggJ4zA-jaaicgiz9B1McKMvWG4OGCreDbY';
-const SHEET_NAMES = ['英語_プロンプト集', '投資格言', 'ことわざ', '基本情報技術者'];
-const API_BASE = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=`;
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwqWwFSr1cRDAlKTBeCFwFxEprf-kXhJyJ2uvsAWRC0kV_f8F51rGcv9oI7yABO0AQp/exec";
 
 // ===== キーボードレイアウト =====
 const KB_ROWS = [
@@ -580,35 +578,46 @@ function highlightKey(char) {
 }
 
 // ===== データ取得 =====
-let allData = {}; // { sheetName: [ {unit, typing, desc, ruby} ] }
+let allData = {};
+
+function fetchJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    window[cbName] = (data) => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    script.onerror = () => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      reject(new Error('JSONP failed'));
+    };
+    script.src = url + '&callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
 
 async function fetchSheet(sheetName) {
-  const url = API_BASE + encodeURIComponent(sheetName);
-  const res = await fetch(url);
-  const text = await res.text();
-  const json = JSON.parse(text.replace(/^.*?(\{)/, '$1').replace(/\);?\s*$/, ''));
-  const rows = json.table.rows;
-  const data = [];
-  rows.forEach(row => {
-    if (!row.c) return;
-    const b = row.c[1]?.v ?? ''; // B列: 単元
-    const c = row.c[2]?.v ?? ''; // C列: タイピング文
-    const d = row.c[3]?.v ?? ''; // D列: 説明
-    const e = row.c[4]?.v ?? ''; // E列: ふりがな
-    if (!c) return;
-    data.push({ unit: String(b), typing: String(c), desc: String(d), ruby: String(e) });
-  });
+  const url = GAS_URL + '?sheet=' + encodeURIComponent(sheetName);
+  const data = await fetchJsonp(url);
   return data;
 }
 
 async function loadAllSheets() {
   document.getElementById('loading').classList.add('show');
-  for (const name of SHEET_NAMES) {
-    try {
-      allData[name] = await fetchSheet(name);
-    } catch(e) {
-      allData[name] = [];
+  try {
+    const sheetNames = await fetchJsonp(GAS_URL + '?');
+    for (const name of sheetNames) {
+      try {
+        allData[name] = await fetchSheet(name);
+      } catch(e) {
+        allData[name] = [];
+      }
     }
+  } catch(e) {
+    console.error('データ取得エラー:', e);
   }
   document.getElementById('loading').classList.remove('show');
   setupSheetSelect();
