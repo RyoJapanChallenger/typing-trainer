@@ -194,7 +194,7 @@
   .description {
     font-size: 0.95rem;
     font-weight: 300;
-    color: var(--text-dim);
+    color: var(--text);
     line-height: 1.9;
     margin-bottom: 0.8rem;
     letter-spacing: 0.03em;
@@ -833,6 +833,8 @@ const ROMAJI_TABLE = (() => {
     'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
   };
   Object.assign(t, youonExtra);
+  // 長音符
+  t['-'] = 'ー';
   // ん（次が子音または文末）
   t['n'] = 'ん_pending'; // 特別処理
   return t;
@@ -880,6 +882,8 @@ const KANA_ROMAJI = (() => {
   map['ん'] = ['n', 'nn'];
   // っ
   map['っ'] = ['ltu', 'xtu', 'ltsu', 'xtsu'];
+  // 長音符
+  map['ー'] = ['-'];
   // 拗音複合（2文字を1単位）
   const youon = {
     'きゃ':['kya'],'きゅ':['kyu'],'きょ':['kyo'],
@@ -1058,7 +1062,8 @@ function loadSentence() {
     highlightKey(displayText[0]);
   }
   inputField.focus();
-  speak(displayText);
+  const speakText = s.reading || s.display || s.typing || '';
+  speak(speakText);
 }
 
 function speak(text) {
@@ -1272,7 +1277,11 @@ function flashError() {
 
 inputField.addEventListener('keydown', (e) => {
   if (isPaused) return;
-  if (e.key === 'Escape') { speak(sentences[current].display || sentences[current].typing || ''); return; }
+  if (e.key === 'Escape') {
+    const s = sentences[current];
+    speak(s.reading || s.display || s.typing || '');
+    return;
+  }
   if (e.key.length !== 1) return;
   e.preventDefault();
   if (!startTime) startTime = Date.now();
@@ -1351,7 +1360,10 @@ document.getElementById('pauseBackBtn').addEventListener('click', goToSelector);
 // 直接→分野選択に戻る
 document.getElementById('backToSelectBtn').addEventListener('click', goToSelector);
 
-document.getElementById('audioBtn').addEventListener('click', () => speak(sentences[current].display || sentences[current].typing || ''));
+document.getElementById('audioBtn').addEventListener('click', () => {
+  const s = sentences[current];
+  speak(s.reading || s.display || s.typing || '');
+});
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('sheetSelect').addEventListener('change', onSheetChange);
 
