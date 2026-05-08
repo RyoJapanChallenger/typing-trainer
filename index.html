@@ -818,20 +818,35 @@ const ROMAJI_TABLE = (() => {
   }
   // 特殊
   Object.assign(t, SP);
+  // 拗音をROMAJI_TABLEにも追加（isPossibleチェック用）
+  const youonExtra = {
+    'kya':'きゃ','kyu':'きゅ','kyo':'きょ',
+    'gya':'ぎゃ','gyu':'ぎゅ','gyo':'ぎょ',
+    'sha':'しゃ','shu':'しゅ','sho':'しょ','sya':'しゃ','syu':'しゅ','syo':'しょ',
+    'ja':'じゃ','ju':'じゅ','jo':'じょ','jya':'じゃ','jyu':'じゅ','jyo':'じょ',
+    'cha':'ちゃ','chu':'ちゅ','cho':'ちょ','tya':'ちゃ','tyu':'ちゅ','tyo':'ちょ',
+    'nya':'にゃ','nyu':'にゅ','nyo':'にょ',
+    'hya':'ひゃ','hyu':'ひゅ','hyo':'ひょ',
+    'bya':'びゃ','byu':'びゅ','byo':'びょ',
+    'pya':'ぴゃ','pyu':'ぴゅ','pyo':'ぴょ',
+    'mya':'みゃ','myu':'みゅ','myo':'みょ',
+    'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
+  };
+  Object.assign(t, youonExtra);
   // ん（次が子音または文末）
   t['n'] = 'ん_pending'; // 特別処理
   return t;
 })();
 
-// ローマ字バッファ→かな変換（最長一致）
+// ローマ字バッファ→かな変換（最長一致・拗音対応）
 function romajiToKana(buf) {
   // 促音（同じ子音が重なる場合）
   if (buf.length >= 2 && buf[0] === buf[1] && buf[0] !== 'n' && 'bcdfghjklmpqrstvwxyz'.includes(buf[0])) {
     const rest = romajiToKana(buf.slice(1));
     if (rest !== null) return 'っ' + rest;
   }
-  // 最長一致
-  for (let len = Math.min(buf.length, 4); len >= 1; len--) {
+  // 最長一致（最大5文字まで拡張：xtsu等）
+  for (let len = Math.min(buf.length, 5); len >= 1; len--) {
     const key = buf.slice(0, len);
     if (ROMAJI_TABLE[key] !== undefined && ROMAJI_TABLE[key] !== 'ん_pending') {
       return ROMAJI_TABLE[key];
@@ -853,18 +868,35 @@ function isJapanese(text) {
   return /[\u3040-\u30ff\u4e00-\u9fff]/.test(text);
 }
 
-// かな1文字に対応するローマ字パターン一覧（複数対応）
+// かな1文字（または拗音2文字）に対応するローマ字パターン一覧
 const KANA_ROMAJI = (() => {
   const map = {};
   const entries = Object.entries(ROMAJI_TABLE).filter(([,v]) => v !== 'ん_pending');
   for (const [r, k] of entries) {
     if (!map[k]) map[k] = [];
-    map[k].push(r);
+    if (!map[k].includes(r)) map[k].push(r);
   }
   // ん
   map['ん'] = ['n', 'nn'];
-  // っ（次の子音を重ねる形は動的処理）
+  // っ
   map['っ'] = ['ltu', 'xtu', 'ltsu', 'xtsu'];
+  // 拗音複合（2文字を1単位）
+  const youon = {
+    'きゃ':['kya'],'きゅ':['kyu'],'きょ':['kyo'],
+    'ぎゃ':['gya'],'ぎゅ':['gyu'],'ぎょ':['gyo'],
+    'しゃ':['sha','sya'],'しゅ':['shu','syu'],'しょ':['sho','syo'],
+    'じゃ':['ja','jya','zya'],'じゅ':['ju','jyu','zyu'],'じょ':['jo','jyo','zyo'],
+    'ちゃ':['cha','tya'],'ちゅ':['chu','tyu'],'ちょ':['cho','tyo'],
+    'にゃ':['nya'],'にゅ':['nyu'],'にょ':['nyo'],
+    'ひゃ':['hya'],'ひゅ':['hyu'],'ひょ':['hyo'],
+    'びゃ':['bya'],'びゅ':['byu'],'びょ':['byo'],
+    'ぴゃ':['pya'],'ぴゅ':['pyu'],'ぴょ':['pyo'],
+    'みゃ':['mya'],'みゅ':['myu'],'みょ':['myo'],
+    'りゃ':['rya'],'りゅ':['ryu'],'りょ':['ryo'],
+    'てぃ':['thi'],'でぃ':['dhi'],
+    'ふぁ':['fa'],'ふぃ':['fi'],'ふぇ':['fe'],'ふぉ':['fo'],
+  };
+  Object.assign(map, youon);
   return map;
 })();
 
@@ -903,9 +935,22 @@ function startGame() {
 }
 
 // かな文字列を1文字ずつ配列に分解（拗音は2文字を1単位にしない→1文字ずつ）
+// かな文字列を意味単位で分解（拗音は2文字を1単位に）
 function splitKana(text) {
   if (!text) return [];
-  return [...text];
+  const small = 'ぁぃぅぇぉゃゅょっァィゥェォャュョッ';
+  const result = [];
+  const chars = [...text];
+  for (let i = 0; i < chars.length; i++) {
+    // 次の文字が小文字かな（拗音・促音）の場合は結合
+    if (i + 1 < chars.length && small.includes(chars[i + 1]) && chars[i + 1] !== 'っ' && chars[i + 1] !== 'ッ') {
+      result.push(chars[i] + chars[i + 1]);
+      i++;
+    } else {
+      result.push(chars[i]);
+    }
+  }
+  return result;
 }
 
 // ターゲットが日本語かどうか（F列のreadingで判定）
@@ -1182,12 +1227,17 @@ function handleJapaneseKey(key) {
     return;
   }
 
-  // 変換途中かチェック
-  const isPossible = Object.keys(ROMAJI_TABLE).some(r => r.startsWith(newBuf));
+  // 変換途中かチェック（ROMAJI_TABLEとKANA_ROMAJIの全パターンで確認）
+  const allRomajiPatterns = [
+    ...Object.keys(ROMAJI_TABLE),
+    ...Object.values(KANA_ROMAJI).flat()
+  ];
+  const isPossible = allRomajiPatterns.some(r => r.startsWith(newBuf));
   if (isPossible) {
     totalTyped++;
     romajiBuffer = newBuf;
     renderJapanese();
+    highlightKey(getNextRomajiHint());
     updateStats();
   } else {
     // 変換不可能なパターン
